@@ -1,0 +1,117 @@
+{
+  "application_credentials": {
+    "description": "Météo-France stellt die Messwerte seiner Stationen kostenlos über sein API-Portal bereit.\n\n1. Erstelle ein Konto im [Météo-France API-Portal]({portal_url}) und melde dich an.\n2. Öffne die API [Données Publiques Observation]({api_url}) und abonniere sie (kostenlos).\n3. Klicke unter **Mes API** bei dieser API auf **Générer token** und wähle **OAuth2**. Das curl-Beispiel unten enthält `Authorization: Basic APPLICATION_ID`.\n4. Füge diese **Application ID** in beide Felder ein, Client-ID und Client-Secret. Zeigt deine Anwendung einen *Consumer Key* und ein *Consumer Secret*, kannst du stattdessen diese eingeben.\n\nDie Integration erneuert die einstündigen Tokens selbst: Kein Schlüssel läuft ab."
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Météo-France-Zugangsdaten",
+        "description": "Wähle die zu verwendenden Météo-France-Anwendungszugangsdaten.",
+        "data": {
+          "implementation": "Zugangsdaten"
+        }
+      },
+      "search": {
+        "title": "Station suchen",
+        "description": "Die Messwerte stammen von Bodenstationen von Météo-France, die alle 6 Minuten eine Beobachtung veröffentlichen. Wie möchtest du deine Station finden?",
+        "menu_options": {
+          "location": "Um einen Punkt auf der Karte",
+          "department": "Nach Département",
+          "manual": "Ich kenne die Stations-ID"
+        }
+      },
+      "location": {
+        "title": "Um einen Punkt",
+        "description": "Setze die Markierung auf dein Zuhause. Die 20 nächstgelegenen Stationen werden nach Entfernung sortiert vorgeschlagen.",
+        "data": {
+          "location": "Standort"
+        }
+      },
+      "department": {
+        "title": "Nach Département",
+        "description": "Wähle das Département. Die Anzahl der Stationen steht in Klammern.",
+        "data": {
+          "department": "Département"
+        }
+      },
+      "manual": {
+        "title": "Stations-ID",
+        "description": "Die Stations-ID hat 8 Ziffern und beginnt mit der Nummer des Départements, zum Beispiel 75110001 für Paris-Lariboisière.",
+        "data": {
+          "station_id": "Stations-ID"
+        }
+      },
+      "station": {
+        "title": "Station wählen",
+        "description": "Jede Zeile zeigt den Namen der Station, ihre ID, die Entfernung und die Höhe. Wähle eine nahe Station auf ähnlicher Höhe wie dein Zuhause.",
+        "data": {
+          "station_id": "Station"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Météo-France-Zugang prüfen",
+        "description": "Météo-France hat die Anfragen für {station} abgelehnt. Prüfe die Anwendungszugangsdaten (Einstellungen > Geräte & Dienste > Drei-Punkte-Menü > Anwendungsanmeldeinformationen) und dein Abonnement der API [Données Publiques Observation]({api_url}) und bestätige dann.",
+        "data": {
+          "implementation": "Zugangsdaten"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Météo-France hat die Zugangsdaten abgelehnt.",
+      "not_subscribed": "Die Anwendung hat die API Données Publiques Observation nicht abonniert.",
+      "no_data": "Diese Station veröffentlicht keine 6-Minuten-Beobachtung. Wähle eine andere Station.",
+      "cannot_connect": "Die Météo-France-API ist nicht erreichbar. Versuche es später erneut.",
+      "unknown_station": "Keine Station mit dieser ID. Prüfe die 8 Ziffern einschließlich der führenden Null."
+    },
+    "abort": {
+      "already_configured": "Diese Station ist bereits eingerichtet.",
+      "missing_credentials": "Füge zuerst die Météo-France-Anwendungszugangsdaten hinzu.",
+      "invalid_auth": "Météo-France hat die Zugangsdaten abgelehnt. Prüfe sie unter Einstellungen > Geräte & Dienste > Drei-Punkte-Menü > Anwendungsanmeldeinformationen.",
+      "not_subscribed": "Die Anwendung hat die API nicht abonniert. Abonniere [Données Publiques Observation]({api_url}) im [Météo-France API-Portal]({portal_url}) und versuche es erneut.",
+      "cannot_connect": "Die Météo-France-API ist nicht erreichbar. Versuche es später erneut.",
+      "no_stations": "Météo-France hat eine leere Stationsliste geliefert. Versuche es später erneut.",
+      "reauth_successful": "Zugang zu Météo-France wiederhergestellt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aktualisierungsintervall",
+        "description": "Die Stationen veröffentlichen alle 6 Minuten: Ein kürzeres Intervall ist nutzlos.",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "dew_point": {
+        "name": "Taupunkt"
+      },
+      "sea_level_pressure": {
+        "name": "Luftdruck auf Meereshöhe"
+      },
+      "wind_direction": {
+        "name": "Windrichtung"
+      },
+      "wind_gust": {
+        "name": "Windböe"
+      }
+    }
+  },
+  "exceptions": {
+    "missing_credentials": {
+      "message": "Die Météo-France-Anwendungszugangsdaten dieses Eintrags wurden entfernt. Füge sie erneut hinzu oder richte die Station neu ein."
+    },
+    "invalid_auth": {
+      "message": "Météo-France hat die Anwendungszugangsdaten abgelehnt."
+    },
+    "not_subscribed": {
+      "message": "Die Météo-France-Anwendung hat die API Données Publiques Observation nicht abonniert."
+    },
+    "update_failed": {
+      "message": "Die Météo-France-Beobachtung kann nicht gelesen werden: {error}"
+    }
+  }
+}
