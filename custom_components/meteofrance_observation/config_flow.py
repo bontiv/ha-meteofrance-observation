@@ -6,6 +6,10 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
+from homeassistant.components.application_credentials import (
+    ClientCredential,
+    async_import_client_credential,
+)
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -14,7 +18,6 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_LOCATION
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.selector import (
     LocationSelector,
@@ -26,7 +29,10 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
     TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
+from homeassistant.util import slugify
 
 try:  # Home Assistant 2026.x replaced voluptuous with the compatible probatio.
     import probatio as vol
@@ -40,6 +46,7 @@ from .api import (
     MeteoFranceNoDataError,
     MeteoFranceNotSubscribedError,
     MeteoFranceObsClient,
+    decode_basic_credential,
 )
 from .const import (
     API_PAGE_URL,
@@ -62,6 +69,9 @@ _LOGGER = logging.getLogger(__name__)
 CONF_AUTH_IMPLEMENTATION = "auth_implementation"
 CONF_IMPLEMENTATION = "implementation"
 CONF_DEPARTMENT = "department"
+CONF_AUTHORIZATION = "authorization"
+
+_PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 
 
 def _description_placeholders() -> dict[str, str]:
@@ -87,18 +97,11 @@ class MeteoFranceObsConfigFlow(ConfigFlow, domain=DOMAIN):
         """Return the options flow."""
         return MeteoFranceObsOptionsFlow()
 
-    async def _async_load_implementations(self) -> ConfigFlowResult | None:
-        """Load the application credentials, or abort when there is none."""
-        try:
-            self._implementations = await config_entry_oauth2_flow.async_get_implementations(
-                self.hass, DOMAIN
-            )
-        except HomeAssistantError:
-            return self.async_abort(reason="cannot_connect")
-        if not self._implementations:
-            # The frontend opens the "add application credentials" dialog.
-            return self.async_abort(reason="missing_credentials")
-        return None
+    async def _async_load_implementations(self) -> None:
+        """Load the application credentials of the integration."""
+        self._implementations = await config_entry_oauth2_flow.async_get_implementations(
+            self.hass, DOMAIN
+        )
 
     def _implementation_schema(self, default: str | None = None) -> vol.Schema:
         options = [
@@ -113,21 +116,106 @@ class MeteoFranceObsConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Pick the application credentials to use."""
-        if (abort := await self._async_load_implementations()) is not None:
-            return abort
+    async def _async_store_credential(
+        self, client_id: str, client_secret: str
+    ) -> tuple[config_entry_oauth2_flow.LocalOAuth2Implementation | None, str | None]:
+        """Save the credential in application credentials.
 
+        Returns the implementation, or an error key when the application is
+        already stored with another secret: application credentials cannot be
+        updated, only deleted and added again.
+        """
+        await self._async_load_implementations()
+        for implementation in self._implementations.values():
+            if getattr(implementation, "client_id", None) == client_id:
+                if getattr(implementation, "client_secret", None) == client_secret:
+                    return implementation, None  # type: ignore[return-value]
+                return None, "credentials_changed"
+
+        auth_domain = slugify(f"{DOMAIN}.{client_id}")
+        await async_import_client_credential(
+            self.hass,
+            DOMAIN,
+            ClientCredential(client_id, client_secret, name=f"Météo-France {client_id[:8]}"),
+            auth_domain,
+        )
+        await self._async_load_implementations()
+        return self._implementations[auth_domain], None  # type: ignore[return-value]
+
+    async def _async_check_credential(
+        self, authorization: str, errors: dict[str, str]
+    ) -> config_entry_oauth2_flow.LocalOAuth2Implementation | None:
+        """Decode the Basic credential, check it with Météo-France and store it.
+
+        Returns None and fills `errors` when the form must be shown again.
+        """
+        try:
+            client_id, client_secret = decode_basic_credential(authorization)
+        except ValueError:
+            errors[CONF_AUTHORIZATION] = "invalid_format"
+            return None
+
+        client = async_get_client(self.hass, client_id, client_secret)
+        try:
+            self._stations = await client.async_get_stations()
+        except MeteoFranceAuthError:
+            errors["base"] = "invalid_auth"
+        except MeteoFranceNotSubscribedError:
+            errors["base"] = "not_subscribed"
+        except MeteoFranceError:
+            _LOGGER.exception("Cannot load the Météo-France station list")
+            errors["base"] = "cannot_connect"
+        if errors:
+            return None
+
+        implementation, error = await self._async_store_credential(client_id, client_secret)
+        if error is not None:
+            errors["base"] = error
+            return None
+        self._client = client
+        return implementation
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Use stored credentials or add new ones."""
+        await self._async_load_implementations()
+        if not self._implementations:
+            return await self.async_step_credentials()
+        return self.async_show_menu(step_id="user", menu_options=["existing", "credentials"])
+
+    async def async_step_credentials(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the Basic credential shown by the Météo-France portal."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            implementation = await self._async_check_credential(
+                user_input[CONF_AUTHORIZATION], errors
+            )
+            if implementation is not None:
+                self._implementation = implementation
+                return await self._async_after_stations_loaded()
+
+        return self.async_show_form(
+            step_id="credentials",
+            data_schema=vol.Schema({vol.Required(CONF_AUTHORIZATION): _PASSWORD_SELECTOR}),
+            errors=errors,
+            description_placeholders=_description_placeholders(),
+        )
+
+    async def async_step_existing(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick stored application credentials."""
         if user_input is None and len(self._implementations) > 1:
             return self.async_show_form(
-                step_id="user",
-                data_schema=self._implementation_schema(),
-                description_placeholders=_description_placeholders(),
+                step_id="existing", data_schema=self._implementation_schema()
             )
 
         key = (user_input or {}).get(CONF_IMPLEMENTATION) or next(iter(self._implementations))
         self._implementation = self._implementations[key]  # type: ignore[assignment]
-        self._client = async_get_client(self.hass, self._implementation)  # type: ignore[arg-type]
+        self._client = async_get_client(
+            self.hass, self._implementation.client_id, self._implementation.client_secret
+        )
         try:
             self._stations = await self._client.async_get_stations()
         except MeteoFranceAuthError:
@@ -141,9 +229,11 @@ class MeteoFranceObsConfigFlow(ConfigFlow, domain=DOMAIN):
         except MeteoFranceError:
             _LOGGER.exception("Cannot load the Météo-France station list")
             return self.async_abort(reason="cannot_connect")
+        return await self._async_after_stations_loaded()
+
+    async def _async_after_stations_loaded(self) -> ConfigFlowResult:
         if not self._stations:
             return self.async_abort(reason="no_stations")
-
         return await self.async_step_search()
 
     async def async_step_search(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -295,42 +385,43 @@ class MeteoFranceObsConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Check the credentials again once the user fixed them."""
-        if (abort := await self._async_load_implementations()) is not None:
-            return abort
-
+        """Check the access again, with new credentials or once the subscription is fixed."""
         entry = self._get_reauth_entry()
-        current = entry.data.get(CONF_AUTH_IMPLEMENTATION)
         errors: dict[str, str] = {}
         if user_input is not None:
-            key = user_input.get(CONF_IMPLEMENTATION) or (
-                current if current in self._implementations else next(iter(self._implementations))
-            )
-            implementation = self._implementations[key]
-            client = async_get_client(self.hass, implementation)  # type: ignore[arg-type]
-            try:
-                await client.async_get_observation(entry.data[CONF_STATION_ID])
-            except MeteoFranceAuthError:
-                errors["base"] = "invalid_auth"
-            except MeteoFranceNotSubscribedError:
-                errors["base"] = "not_subscribed"
-            except MeteoFranceNoDataError:
-                errors["base"] = "no_data"
-            except MeteoFranceError:
-                errors["base"] = "cannot_connect"
+            implementation: config_entry_oauth2_flow.LocalOAuth2Implementation | None
+            if authorization := user_input.get(CONF_AUTHORIZATION, "").strip():
+                implementation = await self._async_check_credential(authorization, errors)
             else:
-                return self.async_update_reload_and_abort(
-                    entry, data_updates={CONF_AUTH_IMPLEMENTATION: implementation.domain}
+                await self._async_load_implementations()
+                implementation = self._implementations.get(  # type: ignore[assignment]
+                    entry.data[CONF_AUTH_IMPLEMENTATION]
                 )
+                if implementation is None:
+                    errors[CONF_AUTHORIZATION] = "credentials_required"
 
-        schema = (
-            self._implementation_schema(current if current in self._implementations else None)
-            if len(self._implementations) > 1
-            else vol.Schema({})
-        )
+            if implementation is not None:
+                client = async_get_client(
+                    self.hass, implementation.client_id, implementation.client_secret
+                )
+                try:
+                    await client.async_get_observation(entry.data[CONF_STATION_ID])
+                except MeteoFranceAuthError:
+                    errors["base"] = "invalid_auth"
+                except MeteoFranceNotSubscribedError:
+                    errors["base"] = "not_subscribed"
+                except MeteoFranceNoDataError:
+                    errors["base"] = "no_data"
+                except MeteoFranceError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    return self.async_update_reload_and_abort(
+                        entry, data_updates={CONF_AUTH_IMPLEMENTATION: implementation.domain}
+                    )
+
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=schema,
+            data_schema=vol.Schema({vol.Optional(CONF_AUTHORIZATION): _PASSWORD_SELECTOR}),
             errors=errors,
             description_placeholders={
                 **_description_placeholders(),

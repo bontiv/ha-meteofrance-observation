@@ -28,17 +28,17 @@ L'API est gratuite.
 1. Créez un compte sur le [portail API Météo-France](https://portail-api.meteofrance.fr) et connectez-vous.
 2. Ouvrez l'API [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) et souscrivez-y.
 3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**.
-4. En bas de page, l'exemple `curl` contient `Authorization: Basic APPLICATION_ID`. Copiez cet **Application ID**.
+4. En bas de page, l'exemple `curl` contient `Authorization: Basic` suivi d'une longue valeur. Copiez cette valeur.
 
 > [!TIP]
-> L'Application ID est la *consumer key* et le *consumer secret* de votre application, encodés ensemble. Si le portail vous montre ces deux valeurs, vous pouvez les saisir à la place.
+> Cette valeur est `APPLICATION_ID:APPLICATION_SECRET` encodé en Base64. L'intégration la décode et enregistre l'identifiant et le secret dans les **Identifiants de l'application** de Home Assistant.
 
 ## 2. Ajouter la station dans Home Assistant
 
 [![Ajouter l'intégration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=meteofrance_observation)
 
 1. **Paramètres > Appareils et services > Ajouter une intégration > Météo-France Observation**.
-2. Home Assistant demande d'abord les identifiants de l'application. Collez l'**Application ID** dans les deux champs, **ID client** et **Secret client**. Le rappel des étapes ci-dessus s'affiche dans cette fenêtre.
+2. Collez la valeur copiée après `Authorization: Basic` (coller l'en-tête complet fonctionne aussi). Le rappel des étapes ci-dessus s'affiche dans cette fenêtre. Si des identifiants sont déjà enregistrés, Home Assistant propose de les réutiliser.
 3. Choisissez comment trouver la station :
    - **Autour d'un point sur la carte** : le repère est placé sur votre domicile. Les 20 stations les plus proches sont proposées avec leur distance et leur altitude.
    - **Par département** : toutes les stations du département, triées par nom.

@@ -41,26 +41,29 @@ class MeteoFranceNoDataError(MeteoFranceError):
     """The station has no 6-minute observation."""
 
 
-def _is_application_id(value: str) -> bool:
-    """Tell if a value is a portal "Application ID": base64 of `key:secret`."""
-    try:
-        decoded = base64.b64decode(value.strip(), validate=True).decode("ascii")
-    except ValueError:
-        return False
-    key, sep, secret = decoded.partition(":")
-    return bool(sep and key and secret and decoded.isprintable())
+def decode_basic_credential(value: str) -> tuple[str, str]:
+    """Extract the application id and secret from the portal Basic credential.
+
+    The curl example of "Générer token" contains
+    `Authorization: Basic base64(APPLICATION_ID:APPLICATION_SECRET)`. The whole
+    header, `Basic <value>` or the value alone are accepted.
+    Raises ValueError when the value cannot be decoded.
+    """
+    value = value.strip().strip("\"'")
+    if value.lower().startswith("authorization:"):
+        value = value[len("authorization:") :].strip()
+    if value.lower().startswith("basic "):
+        value = value[len("basic ") :].strip()
+    decoded = base64.b64decode(value, validate=True).decode("utf-8")
+    client_id, sep, client_secret = decoded.partition(":")
+    if not (sep and client_id and client_secret and decoded.isprintable()):
+        raise ValueError("Not a base64 encoded APPLICATION_ID:APPLICATION_SECRET")
+    return client_id, client_secret
 
 
 def basic_credential(client_id: str, client_secret: str) -> str:
-    """Return the Basic credential of the token request.
-
-    The portal mostly shows the "Application ID" (in the curl example of
-    "Générer token"), which is already the encoded credential: it is accepted
-    in place of the client id.
-    """
-    if _is_application_id(client_id):
-        return client_id.strip()
-    return base64.b64encode(f"{client_id.strip()}:{client_secret.strip()}".encode()).decode()
+    """Return the Basic credential of the token request."""
+    return base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
 
 
 class TokenManager:

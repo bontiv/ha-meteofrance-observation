@@ -30,17 +30,17 @@ The API is free.
 1. Create an account on the [Météo-France API portal](https://portail-api.meteofrance.fr) and sign in.
 2. Open the [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) API and subscribe to it.
 3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**.
-4. At the bottom of the page, the `curl` example contains `Authorization: Basic APPLICATION_ID`. Copy this **Application ID**.
+4. At the bottom of the page, the `curl` example contains `Authorization: Basic` followed by a long value. Copy this value.
 
 > [!TIP]
-> The Application ID is your application's *consumer key* and *consumer secret* encoded together. If the portal shows you these two values, you can enter them instead.
+> This value is `APPLICATION_ID:APPLICATION_SECRET` encoded in Base64. The integration decodes it and saves the ID and secret in Home Assistant's **Application credentials**.
 
 ## 2. Add the station in Home Assistant
 
 [![Add the integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=meteofrance_observation)
 
 1. **Settings > Devices & services > Add integration > Météo-France Observation**.
-2. Home Assistant first asks for the application credentials. Paste the **Application ID** in both fields, **Client ID** and **Client secret**. The steps above are recalled in this dialog.
+2. Paste the value copied after `Authorization: Basic` (pasting the whole header also works). The steps above are recalled in this dialog. If credentials are already saved, Home Assistant offers to reuse them.
 3. Choose how to find the station:
    - **Around a point on the map**: the pin starts on your home. The 20 nearest stations are proposed with their distance and altitude.
    - **By department**: every station of the department, sorted by name.

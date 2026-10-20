@@ -25,7 +25,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MeteoFranceObsConfigEntr
             translation_domain=DOMAIN, translation_key="missing_credentials"
         ) from err
 
-    coordinator = MeteoFranceObsCoordinator(hass, entry, async_get_client(hass, implementation))
+    client = async_get_client(hass, implementation.client_id, implementation.client_secret)
+    coordinator = MeteoFranceObsCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 

@@ -1,12 +1,30 @@
 {
   "application_credentials": {
-    "description": "Météo-France provides the measurements of its stations for free through its API portal.\n\n1. Create an account on the [Météo-France API portal]({portal_url}) and sign in.\n2. Open the [Données Publiques Observation]({api_url}) API and subscribe to it (free).\n3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**. The curl example at the bottom contains `Authorization: Basic APPLICATION_ID`.\n4. Paste this **Application ID** in both the client ID and client secret fields. If your application shows a *consumer key* and a *consumer secret*, you can enter them instead.\n\nThe integration renews the one-hour tokens by itself: no key expires."
+    "description": "The simplest way is to add the **Météo-France Observation** integration directly: it asks for the value shown after `Authorization: Basic` on the portal and decodes it for you.\n\nTo enter the credentials here instead, decode this Base64 value: you get `APPLICATION_ID:APPLICATION_SECRET`. The client ID is the part before the colon, the client secret the part after it. The value is shown on the [Météo-France API portal]({portal_url}), in the curl example of **Générer token** for the [Données Publiques Observation]({api_url}) API."
   },
   "config": {
     "step": {
       "user": {
         "title": "Météo-France credentials",
-        "description": "Choose the Météo-France application credentials to use.",
+        "description": "Use credentials already saved in Home Assistant, or add new ones.",
+        "menu_options": {
+          "existing": "Use saved credentials",
+          "credentials": "Add new credentials"
+        }
+      },
+      "credentials": {
+        "title": "Météo-France credentials",
+        "description": "1. Create an account on the [Météo-France API portal]({portal_url}) and sign in.\n2. Open the [Données Publiques Observation]({api_url}) API and subscribe to it (free).\n3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**.\n4. The curl example at the bottom of the page contains `Authorization: Basic` followed by a long value. Copy this value and paste it below.\n\nThe value is decoded to get the application ID and secret, which are saved in Home Assistant application credentials. Tokens are then renewed automatically.",
+        "data": {
+          "authorization": "Value after \"Authorization: Basic\""
+        },
+        "data_description": {
+          "authorization": "Base64 encoded APPLICATION_ID:APPLICATION_SECRET. Pasting the whole header also works."
+        }
+      },
+      "existing": {
+        "title": "Saved credentials",
+        "description": "Choose the Météo-France credentials to use.",
         "data": {
           "implementation": "Credentials"
         }
@@ -50,9 +68,12 @@
       },
       "reauth_confirm": {
         "title": "Check the Météo-France access",
-        "description": "Météo-France rejected the requests for {station}. Check the application credentials (Settings > Devices & services > three dots menu > Application credentials) and your subscription to the [Données Publiques Observation]({api_url}) API, then submit.",
+        "description": "Météo-France rejected the requests for {station}. If you created new credentials, paste the value shown after `Authorization: Basic` in the curl example of **Générer token**. If you only fixed your subscription to the [Données Publiques Observation]({api_url}) API, leave the field empty and submit.",
         "data": {
-          "implementation": "Credentials"
+          "authorization": "Value after \"Authorization: Basic\""
+        },
+        "data_description": {
+          "authorization": "Base64 encoded APPLICATION_ID:APPLICATION_SECRET. Pasting the whole header also works."
         }
       }
     },
@@ -61,11 +82,13 @@
       "not_subscribed": "The application is not subscribed to the Données Publiques Observation API.",
       "no_data": "This station publishes no 6-minute observation. Choose another station.",
       "cannot_connect": "Cannot reach the Météo-France API. Try again later.",
-      "unknown_station": "No station with this ID. Check the 8 digits, including the leading zero."
+      "unknown_station": "No station with this ID. Check the 8 digits, including the leading zero.",
+      "invalid_format": "This value cannot be decoded. Copy only the text after \"Authorization: Basic\".",
+      "credentials_changed": "This application is already saved with another secret. Delete it in Settings > Devices & services > three dots menu > Application credentials, or create a new application on the portal.",
+      "credentials_required": "The saved credentials were removed: paste the value after \"Authorization: Basic\"."
     },
     "abort": {
       "already_configured": "This station is already configured.",
-      "missing_credentials": "Add the Météo-France application credentials first.",
       "invalid_auth": "Météo-France rejected the credentials. Check them in Settings > Devices & services > three dots menu > Application credentials.",
       "not_subscribed": "The application is not subscribed to the API. Subscribe to [Données Publiques Observation]({api_url}) on the [Météo-France API portal]({portal_url}), then try again.",
       "cannot_connect": "Cannot reach the Météo-France API. Try again later.",

@@ -1,12 +1,30 @@
 {
   "application_credentials": {
-    "description": "Météo-France met gratuitement à disposition les mesures de ses stations via son portail API.\n\n1. Créez un compte sur le [portail API Météo-France]({portal_url}) et connectez-vous.\n2. Ouvrez l'API [Données Publiques Observation]({api_url}) et souscrivez-y (gratuit).\n3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**. L'exemple curl en bas de page contient `Authorization: Basic APPLICATION_ID`.\n4. Collez cet **Application ID** dans les deux champs, ID client et secret client. Si votre application affiche une *consumer key* et un *consumer secret*, vous pouvez les saisir à la place.\n\nL'intégration renouvelle elle-même les jetons d'une heure : aucune clé n'expire."
+    "description": "Le plus simple est d'ajouter directement l'intégration **Météo-France Observation** : elle vous demande la valeur affichée après `Authorization: Basic` sur le portail et la décode pour vous.\n\nPour saisir les identifiants ici, décodez cette valeur Base64 : vous obtenez `APPLICATION_ID:APPLICATION_SECRET`. L'ID client est la partie avant les deux-points, le secret client la partie après. La valeur s'affiche sur le [portail API Météo-France]({portal_url}), dans l'exemple curl de **Générer token** de l'API [Données Publiques Observation]({api_url})."
   },
   "config": {
     "step": {
       "user": {
         "title": "Identifiants Météo-France",
-        "description": "Choisissez les identifiants d'application Météo-France à utiliser.",
+        "description": "Utilisez des identifiants déjà enregistrés dans Home Assistant, ou ajoutez-en de nouveaux.",
+        "menu_options": {
+          "existing": "Utiliser des identifiants enregistrés",
+          "credentials": "Ajouter de nouveaux identifiants"
+        }
+      },
+      "credentials": {
+        "title": "Identifiants Météo-France",
+        "description": "1. Créez un compte sur le [portail API Météo-France]({portal_url}) et connectez-vous.\n2. Ouvrez l'API [Données Publiques Observation]({api_url}) et souscrivez-y (gratuit).\n3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**.\n4. L'exemple curl en bas de page contient `Authorization: Basic` suivi d'une longue valeur. Copiez cette valeur et collez-la ci-dessous.\n\nLa valeur est décodée pour obtenir l'identifiant et le secret de l'application, enregistrés dans les identifiants d'application de Home Assistant. Les jetons sont ensuite renouvelés automatiquement.",
+        "data": {
+          "authorization": "Valeur après « Authorization: Basic »"
+        },
+        "data_description": {
+          "authorization": "APPLICATION_ID:APPLICATION_SECRET encodé en Base64. Vous pouvez aussi coller l'en-tête complet."
+        }
+      },
+      "existing": {
+        "title": "Identifiants enregistrés",
+        "description": "Choisissez les identifiants Météo-France à utiliser.",
         "data": {
           "implementation": "Identifiants"
         }
@@ -50,9 +68,12 @@
       },
       "reauth_confirm": {
         "title": "Vérifier l'accès Météo-France",
-        "description": "Météo-France a refusé les requêtes pour {station}. Vérifiez les identifiants d'application (Paramètres > Appareils et services > menu ⋮ > Identifiants de l'application) et votre souscription à l'API [Données Publiques Observation]({api_url}), puis validez.",
+        "description": "Météo-France a refusé les requêtes pour {station}. Si vous avez créé de nouveaux identifiants, collez la valeur affichée après `Authorization: Basic` dans l'exemple curl de **Générer token**. Si vous avez seulement corrigé votre souscription à l'API [Données Publiques Observation]({api_url}), laissez le champ vide et validez.",
         "data": {
-          "implementation": "Identifiants"
+          "authorization": "Valeur après « Authorization: Basic »"
+        },
+        "data_description": {
+          "authorization": "APPLICATION_ID:APPLICATION_SECRET encodé en Base64. Vous pouvez aussi coller l'en-tête complet."
         }
       }
     },
@@ -61,11 +82,13 @@
       "not_subscribed": "L'application n'est pas abonnée à l'API Données Publiques Observation.",
       "no_data": "Cette station ne publie pas d'observation toutes les 6 minutes. Choisissez-en une autre.",
       "cannot_connect": "Impossible de joindre l'API Météo-France. Réessayez plus tard.",
-      "unknown_station": "Aucune station ne porte cet identifiant. Vérifiez les 8 chiffres, zéro initial compris."
+      "unknown_station": "Aucune station ne porte cet identifiant. Vérifiez les 8 chiffres, zéro initial compris.",
+      "invalid_format": "Impossible de décoder cette valeur. Copiez uniquement le texte après « Authorization: Basic ».",
+      "credentials_changed": "Cette application est déjà enregistrée avec un autre secret. Supprimez-la dans Paramètres > Appareils et services > menu ⋮ > Identifiants de l'application, ou créez une nouvelle application sur le portail.",
+      "credentials_required": "Les identifiants enregistrés ont été supprimés : collez la valeur après « Authorization: Basic »."
     },
     "abort": {
       "already_configured": "Cette station est déjà configurée.",
-      "missing_credentials": "Ajoutez d'abord les identifiants d'application Météo-France.",
       "invalid_auth": "Météo-France a refusé les identifiants. Vérifiez-les dans Paramètres > Appareils et services > menu ⋮ > Identifiants de l'application.",
       "not_subscribed": "L'application n'est pas abonnée à l'API. Souscrivez à [Données Publiques Observation]({api_url}) sur le [portail API Météo-France]({portal_url}), puis réessayez.",
       "cannot_connect": "Impossible de joindre l'API Météo-France. Réessayez plus tard.",

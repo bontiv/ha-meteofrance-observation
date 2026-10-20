@@ -30,17 +30,17 @@ Die API ist kostenlos.
 1. Erstelle ein Konto im [Météo-France API-Portal](https://portail-api.meteofrance.fr) und melde dich an.
 2. Öffne die API [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) und abonniere sie.
 3. Klicke unter **Mes API** bei dieser API auf **Générer token** und wähle **OAuth2**.
-4. Unten auf der Seite enthält das `curl`-Beispiel `Authorization: Basic APPLICATION_ID`. Kopiere diese **Application ID**.
+4. Unten auf der Seite enthält das `curl`-Beispiel `Authorization: Basic`, gefolgt von einem langen Wert. Kopiere diesen Wert.
 
 > [!TIP]
-> Die Application ID ist der *Consumer Key* und das *Consumer Secret* deiner Anwendung, gemeinsam kodiert. Zeigt dir das Portal diese beiden Werte, kannst du stattdessen diese eingeben.
+> Dieser Wert ist `APPLICATION_ID:APPLICATION_SECRET` in Base64 kodiert. Die Integration dekodiert ihn und speichert ID und Secret in den **Anwendungsanmeldeinformationen** von Home Assistant.
 
 ## 2. Station in Home Assistant hinzufügen
 
 [![Integration hinzufügen.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=meteofrance_observation)
 
 1. **Einstellungen > Geräte & Dienste > Integration hinzufügen > Météo-France Observation**.
-2. Home Assistant fragt zuerst nach den Anwendungszugangsdaten. Füge die **Application ID** in beide Felder ein, **Client-ID** und **Client-Secret**. Die Schritte oben werden in diesem Dialog angezeigt.
+2. Füge den hinter `Authorization: Basic` kopierten Wert ein (der vollständige Header funktioniert auch). Die Schritte oben werden in diesem Dialog angezeigt. Sind bereits Zugangsdaten gespeichert, bietet Home Assistant an, sie wiederzuverwenden.
 3. Wähle, wie die Station gefunden werden soll:
    - **Um einen Punkt auf der Karte**: Die Markierung steht auf deinem Zuhause. Die 20 nächstgelegenen Stationen werden mit Entfernung und Höhe vorgeschlagen.
    - **Nach Département**: alle Stationen des Départements, nach Namen sortiert.

@@ -6,7 +6,7 @@ import base64
 
 import pytest
 
-from custom_components.meteofrance_observation.api import basic_credential
+from custom_components.meteofrance_observation.api import decode_basic_credential
 from custom_components.meteofrance_observation.stations import (
     by_department,
     department_of,
@@ -58,9 +58,25 @@ def test_nearest_and_departments() -> None:
     assert station_label(stations[0], 0.42) == "PARIS-LARIBOISIERE (75110001) – 0.4 km – 52 m"
 
 
-def test_basic_credential() -> None:
-    """The portal Application ID is accepted in place of the client id."""
-    expected = base64.b64encode(b"key:secret").decode()
-    assert basic_credential("key", "secret") == expected
-    assert basic_credential(expected, "anything") == expected
-    assert basic_credential(expected, expected) == expected
+@pytest.mark.parametrize(
+    "value",
+    [
+        "a2V5OnNlY3JldA==",
+        "Basic a2V5OnNlY3JldA==",
+        "Authorization: Basic a2V5OnNlY3JldA==",
+        '"a2V5OnNlY3JldA=="',
+    ],
+)
+def test_decode_basic_credential(value: str) -> None:
+    """The id and secret are extracted from the Basic credential."""
+    assert decode_basic_credential(value) == ("key", "secret")
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "not base64", base64.b64encode(b"no-colon").decode(), base64.b64encode(b":x").decode()],
+)
+def test_decode_basic_credential_invalid(value: str) -> None:
+    """Values that are not base64 of id:secret are refused."""
+    with pytest.raises(ValueError):
+        decode_basic_credential(value)

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+
 from homeassistant import config_entries
 from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_LOCATION
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.config_entry_oauth2_flow import async_get_implementations
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -18,18 +21,112 @@ from custom_components.meteofrance_observation.const import (
 
 from .conftest import OBSERVATION_URL, STATIONS_URL, mock_api, mock_token
 
+NEW_BASIC = base64.b64encode(b"new-id:new-secret").decode()
 
-async def _start(hass: HomeAssistant):
+
+async def _init(hass: HomeAssistant):
     return await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
 
-async def test_missing_credentials(hass: HomeAssistant) -> None:
-    """Without credentials, the flow asks to add them."""
-    result = await _start(hass)
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "missing_credentials"
+async def _start(hass: HomeAssistant):
+    """Start the flow with the stored credentials, up to the search menu."""
+    result = await _init(hass)
+    assert result["type"] is FlowResultType.MENU
+    assert result["menu_options"] == ["existing", "credentials"]
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "existing"}
+    )
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [NEW_BASIC, f"Basic {NEW_BASIC}", f"Authorization: Basic {NEW_BASIC}", f"  '{NEW_BASIC}' "],
+)
+async def test_new_credentials(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, authorization: str
+) -> None:
+    """The Basic value is decoded and saved in application credentials."""
+    mock_api(aioclient_mock)
+    result = await _init(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "credentials"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"authorization": authorization}
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "search"
+    token_call = next(call for call in aioclient_mock.mock_calls if call[0] == "POST")
+    assert token_call[3]["Authorization"] == f"Basic {NEW_BASIC}"
+
+    credentials = await async_get_implementations(hass, DOMAIN)
+    implementation = credentials["meteofrance_observation_new_id"]
+    assert (implementation.client_id, implementation.client_secret) == ("new-id", "new-secret")
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "manual"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_STATION_ID: "75110001"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["auth_implementation"] == "meteofrance_observation_new_id"
+
+
+@pytest.mark.parametrize(
+    ("token_status", "stations_status", "errors"),
+    [
+        (401, 200, {"base": "invalid_auth"}),
+        (200, 403, {"base": "not_subscribed"}),
+        (200, 500, {"base": "cannot_connect"}),
+    ],
+)
+async def test_new_credentials_errors(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    token_status: int,
+    stations_status: int,
+    errors: dict[str, str],
+) -> None:
+    """Rejected credentials are reported in the form and not saved."""
+    mock_token(aioclient_mock, status=token_status)
+    aioclient_mock.get(STATIONS_URL, status=stations_status, text="")
+    result = await _init(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"authorization": NEW_BASIC}
+    )
+    assert result["step_id"] == "credentials"
+    assert result["errors"] == errors
+    assert await async_get_implementations(hass, DOMAIN) == {}
+
+
+@pytest.mark.parametrize("authorization", ["not base64!", base64.b64encode(b"no-colon").decode()])
+async def test_invalid_format(hass: HomeAssistant, authorization: str) -> None:
+    """A value that does not decode to id:secret is refused."""
+    result = await _init(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"authorization": authorization}
+    )
+    assert result["errors"] == {"authorization": "invalid_format"}
+
+
+@pytest.mark.usefixtures("credentials")
+async def test_credentials_changed(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A stored application with another secret cannot be updated."""
+    mock_api(aioclient_mock)
+    result = await _init(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "credentials"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"authorization": base64.b64encode(b"client-id:other-secret").decode()},
+    )
+    assert result["errors"] == {"base": "credentials_changed"}
 
 
 @pytest.mark.usefixtures("credentials")
@@ -150,7 +247,7 @@ async def test_credentials_errors(
     stations_status: int,
     reason: str,
 ) -> None:
-    """Rejected credentials or a missing subscription abort the flow."""
+    """Stored credentials that are rejected abort the flow."""
     mock_token(aioclient_mock, status=token_status)
     aioclient_mock.get(STATIONS_URL, status=stations_status, text="")
     result = await _start(hass)
@@ -195,6 +292,22 @@ async def test_reauth(
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
+
+
+@pytest.mark.usefixtures("credentials")
+async def test_reauth_new_credentials(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, config_entry: MockConfigEntry
+) -> None:
+    """Reauthentication accepts new credentials."""
+    config_entry.add_to_hass(hass)
+    mock_api(aioclient_mock)
+    result = await config_entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"authorization": f"Basic {NEW_BASIC}"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert config_entry.data["auth_implementation"] == "meteofrance_observation_new_id"
 
 
 async def test_options(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
