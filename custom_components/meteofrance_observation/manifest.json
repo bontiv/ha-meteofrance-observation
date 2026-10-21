@@ -1,6 +1,6 @@
 {
   "domain": "meteofrance_observation",
-  "name": "Météo-France Observation",
+  "name": "Météo France Observation",
   "codeowners": [
     "@bontiv"
   ],
