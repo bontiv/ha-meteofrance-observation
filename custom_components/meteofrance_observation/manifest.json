@@ -13,7 +13,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/bontiv/ha-meteofrance-observation/issues",
   "requirements": [],
-  "version": "0.1.0",
+  "version": "0.2.0",
   "categories": [
     "sensors.temperature_humidity"
   ]
