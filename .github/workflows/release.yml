@@ -93,7 +93,7 @@ jobs:
         if: steps.state.outputs.resume != 'true'
         shell: bash
         run: |
-          git tag --list 'v*' | python - <<'PY'
+          TAGS="$(git tag --list 'v*')" python - <<'PY'
           import json
           import os
           import sys
@@ -109,7 +109,7 @@ jobs:
               sys.exit(f"Version {version} is lower than manifest version {current}.")
           released = [
               AwesomeVersion(tag[1:])
-              for tag in sys.stdin.read().split()
+              for tag in os.environ["TAGS"].split()
               if AwesomeVersion(tag[1:]).strategy == AwesomeVersionStrategy.SEMVER
           ]
           if released and version <= max(released):
