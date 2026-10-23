@@ -19,7 +19,14 @@ from custom_components.meteofrance_observation.const import (
     DOMAIN,
 )
 
-from .conftest import OBSERVATION_URL, STATIONS_URL, mock_api, mock_token
+from .conftest import (
+    OBSERVATION_URL,
+    OBSERVATION_URL_V1,
+    STATIONS_URL,
+    STATIONS_URL_V1,
+    mock_api,
+    mock_token,
+)
 
 NEW_BASIC = base64.b64encode(b"new-id:new-secret").decode()
 
@@ -93,6 +100,7 @@ async def test_new_credentials_errors(
     """Rejected credentials are reported in the form and not saved."""
     mock_token(aioclient_mock, status=token_status)
     aioclient_mock.get(STATIONS_URL, status=stations_status, text="")
+    aioclient_mock.get(STATIONS_URL_V1, status=stations_status, text="")
     result = await _init(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"authorization": NEW_BASIC}
@@ -250,6 +258,7 @@ async def test_credentials_errors(
     """Stored credentials that are rejected abort the flow."""
     mock_token(aioclient_mock, status=token_status)
     aioclient_mock.get(STATIONS_URL, status=stations_status, text="")
+    aioclient_mock.get(STATIONS_URL_V1, status=stations_status, text="")
     result = await _start(hass)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == reason
@@ -281,6 +290,7 @@ async def test_reauth(
     config_entry.add_to_hass(hass)
     mock_token(aioclient_mock)
     aioclient_mock.get(OBSERVATION_URL, status=403, text="")
+    aioclient_mock.get(OBSERVATION_URL_V1, status=403, text="")
     result = await config_entry.start_reauth_flow(hass)
     assert result["step_id"] == "reauth_confirm"
 

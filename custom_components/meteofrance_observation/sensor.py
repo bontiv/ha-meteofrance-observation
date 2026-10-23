@@ -53,6 +53,18 @@ def _number(key: str) -> Callable[[dict[str, Any]], float | None]:
     return value
 
 
+def _number_first(*keys: str) -> Callable[[dict[str, Any]], float | None]:
+    raw = [_number(key) for key in keys]
+
+    def value(data: dict[str, Any]) -> float | None:
+        for number in raw:
+            if (result := number(data)) is not None:
+                return result
+        return None
+
+    return value
+
+
 def _kelvin_to_celsius(key: str) -> Callable[[dict[str, Any]], float | None]:
     raw = _number(key)
 
@@ -151,7 +163,7 @@ SENSORS: tuple[MeteoFranceObsSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        value_fn=_number("fxi10"),
+        value_fn=_number_first("raf10", "fxi10"),
     ),
     MeteoFranceObsSensorDescription(
         key="precipitation",

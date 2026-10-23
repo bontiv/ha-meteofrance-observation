@@ -11,7 +11,7 @@ from typing import Any
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
 
-from .const import API_BASE_URL, TOKEN_URL
+from .const import API_BASE_URL_V1, API_BASE_URL_V2, TOKEN_URL
 from .stations import Station, parse_stations
 
 _LOGGER = logging.getLogger(__name__)
@@ -128,13 +128,35 @@ class MeteoFranceObsClient:
         self._token_manager = token_manager
 
     async def _async_get(self, path: str, params: dict[str, str] | None = None) -> str:
-        """Run an authenticated GET request and return the response body."""
+        """Run an authenticated GET request on v2, falling back to v1 on a 403.
+
+        A subscription is only valid for one API version: v1 subscribers keep
+        working until Météo-France retires v1 on 2026-12-01. A 401 never
+        triggers the fallback, only the token refresh of _async_get_from.
+        """
+        try:
+            return await self._async_get_from(API_BASE_URL_V2, path, params)
+        except MeteoFranceNotSubscribedError as err:
+            not_subscribed = err
+        try:
+            return await self._async_get_from(API_BASE_URL_V1, path, params)
+        except MeteoFranceError as err:
+            # The application is subscribed to neither version: report the
+            # actionable v2 error whatever the v1 failure was, v1 being
+            # retired on 2026-12-01.
+            _LOGGER.warning("v1 fallback of %s failed after the v2 403: %s", path, err)
+            raise not_subscribed from err
+
+    async def _async_get_from(
+        self, base_url: str, path: str, params: dict[str, str] | None = None
+    ) -> str:
+        """Run an authenticated GET request on one API version and return the body."""
         for attempt in range(2):
             # A 401 means the token was revoked: request a new one and retry once.
             token = await self._token_manager.async_get_token(force_refresh=attempt > 0)
             try:
                 async with self._session.get(
-                    f"{API_BASE_URL}{path}",
+                    f"{base_url}{path}",
                     params=params,
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=REQUEST_TIMEOUT,
@@ -144,6 +166,7 @@ class MeteoFranceObsClient:
             except (ClientError, TimeoutError) as err:
                 raise MeteoFranceConnectionError(f"Request to {path} failed: {err}") from err
 
+            _LOGGER.debug("Response of %s%s (%s): %s", base_url, path, status, body)
             if status == 401 and attempt == 0:
                 continue
             if status == 200:

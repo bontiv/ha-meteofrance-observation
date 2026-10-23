@@ -14,7 +14,7 @@
       },
       "credentials": {
         "title": "Identifiants Météo-France",
-        "description": "1. Créez un compte sur le [portail API Météo-France]({portal_url}) et connectez-vous.\n2. Ouvrez l'API [Données Publiques Observation]({api_url}) et souscrivez-y (gratuit).\n3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**.\n4. L'exemple curl en bas de page contient `Authorization: Basic` suivi d'une longue valeur. Copiez cette valeur et collez-la ci-dessous.\n\nLa valeur est décodée pour obtenir l'identifiant et le secret de l'application, enregistrés dans les identifiants d'application de Home Assistant. Les jetons sont ensuite renouvelés automatiquement.",
+        "description": "1. Créez un compte sur le [portail API Météo-France]({portal_url}) et connectez-vous.\n2. Ouvrez l'API [Données Publiques Observation]({api_url}) et souscrivez à sa **version 2** (gratuit). Un abonnement à la version 1 fonctionne aussi jusqu'à son arrêt par Météo-France le 1er décembre 2026.\n3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**.\n4. L'exemple curl en bas de page contient `Authorization: Basic` suivi d'une longue valeur. Copiez cette valeur et collez-la ci-dessous.\n\nLa valeur est décodée pour obtenir l'identifiant et le secret de l'application, enregistrés dans les identifiants d'application de Home Assistant. Les jetons sont ensuite renouvelés automatiquement.",
         "data": {
           "authorization": "Valeur après « Authorization: Basic »"
         },
@@ -79,7 +79,7 @@
     },
     "error": {
       "invalid_auth": "Météo-France a refusé les identifiants.",
-      "not_subscribed": "L'application n'est pas abonnée à l'API Données Publiques Observation.",
+      "not_subscribed": "L'application n'est pas abonnée à l'API Données Publiques Observation (version 2).",
       "no_data": "Cette station ne publie pas d'observation toutes les 6 minutes. Choisissez-en une autre.",
       "cannot_connect": "Impossible de joindre l'API Météo-France. Réessayez plus tard.",
       "unknown_station": "Aucune station ne porte cet identifiant. Vérifiez les 8 chiffres, zéro initial compris.",
@@ -90,7 +90,7 @@
     "abort": {
       "already_configured": "Cette station est déjà configurée.",
       "invalid_auth": "Météo-France a refusé les identifiants. Vérifiez-les dans Paramètres > Appareils et services > menu ⋮ > Identifiants de l'application.",
-      "not_subscribed": "L'application n'est pas abonnée à l'API. Souscrivez à [Données Publiques Observation]({api_url}) sur le [portail API Météo-France]({portal_url}), puis réessayez.",
+      "not_subscribed": "L'application n'est pas abonnée à l'API. Souscrivez à la version 2 de [Données Publiques Observation]({api_url}) sur le [portail API Météo-France]({portal_url}) (la version 1 fonctionne jusqu'au 1er décembre 2026), puis réessayez.",
       "cannot_connect": "Impossible de joindre l'API Météo-France. Réessayez plus tard.",
       "no_stations": "Météo-France a renvoyé une liste de stations vide. Réessayez plus tard.",
       "reauth_successful": "Accès à Météo-France rétabli."
@@ -131,7 +131,7 @@
       "message": "Météo-France a refusé les identifiants d'application."
     },
     "not_subscribed": {
-      "message": "L'application Météo-France n'est pas abonnée à l'API Données Publiques Observation."
+      "message": "L'application Météo-France n'est pas abonnée à l'API Données Publiques Observation (version 2)."
     },
     "update_failed": {
       "message": "Impossible de lire l'observation Météo-France : {error}"

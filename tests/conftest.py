@@ -14,7 +14,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.meteofrance_observation.const import (
-    API_BASE_URL,
+    API_BASE_URL_V1,
+    API_BASE_URL_V2,
     CONF_ALTITUDE,
     CONF_STATION_ID,
     CONF_STATION_NAME,
@@ -22,8 +23,10 @@ from custom_components.meteofrance_observation.const import (
     TOKEN_URL,
 )
 
-STATIONS_URL = f"{API_BASE_URL}/liste-stations"
-OBSERVATION_URL = f"{API_BASE_URL}/station/infrahoraire-6m"
+STATIONS_URL = f"{API_BASE_URL_V2}/liste-stations"
+OBSERVATION_URL = f"{API_BASE_URL_V2}/station/infrahoraire-6m"
+STATIONS_URL_V1 = f"{API_BASE_URL_V1}/liste-stations"
+OBSERVATION_URL_V1 = f"{API_BASE_URL_V1}/station/infrahoraire-6m"
 
 STATIONS_CSV = (
     "﻿Id_station;Id_omm;Nom_usuel;Latitude;Longitude;Altitude;Date_ouverture;Pack\n"
@@ -37,6 +40,25 @@ STATIONS_CSV = (
 )
 
 OBSERVATION = [
+    {
+        "geo_id_insee": "75110001",
+        "reference_time": "2026-10-20T08:12:00Z",
+        "insert_time": "2026-10-20T08:10:00Z",
+        "validity_time": "2026-10-20T08:06:00Z",
+        "t": 283.75,
+        "td": 281.15,
+        "u": 84,
+        "dd": 220,
+        "ff": 3.2,
+        "raf10": 5.1,
+        "rr_per": 0.2,
+        "pres": 101325,
+        "pmer": 101530,
+    }
+]
+
+# A v1 observation: no raf10 field, gusts in fxi10.
+OBSERVATION_V1 = [
     {
         "geo_id_insee": "75110001",
         "reference_time": "2026-10-20T08:12:00Z",
@@ -92,6 +114,15 @@ def mock_api(
         status=observation_status,
         json=OBSERVATION if observation is None else observation,
     )
+
+
+def mock_api_v1(aioclient_mock: AiohttpClientMocker) -> None:
+    """Mock a v1 subscription: the v2 endpoints reject, the v1 endpoints answer."""
+    mock_token(aioclient_mock)
+    aioclient_mock.get(STATIONS_URL, status=403, text="")
+    aioclient_mock.get(OBSERVATION_URL, status=403, text="")
+    aioclient_mock.get(STATIONS_URL_V1, text=STATIONS_CSV)
+    aioclient_mock.get(OBSERVATION_URL_V1, json=OBSERVATION_V1)
 
 
 @pytest.fixture

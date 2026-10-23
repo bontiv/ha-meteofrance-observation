@@ -26,7 +26,7 @@ Elle a été conçue pour fournir la **température extérieure** de [Versatile 
 L'API est gratuite.
 
 1. Créez un compte sur le [portail API Météo-France](https://portail-api.meteofrance.fr) et connectez-vous.
-2. Ouvrez l'API [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) et souscrivez-y.
+2. Ouvrez l'API [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) et souscrivez à sa **version 2**. Un abonnement à la version 1 fonctionne aussi jusqu'à son arrêt par Météo-France le 1er décembre 2026.
 3. Dans **Mes API**, cliquez sur **Générer token** pour cette API et choisissez **OAuth2**.
 4. En bas de page, l'exemple `curl` contient `Authorization: Basic` suivi d'une longue valeur. Copiez cette valeur.
 
@@ -73,8 +73,9 @@ Chaque capteur indique l'heure de l'observation (`observation_time`) et la posit
 
 ## Dépannage
 
-- **« L'application n'est pas abonnée à l'API »** : souscrivez à *Données Publiques Observation* sur le portail, puis validez la réauthentification proposée par Home Assistant.
+- **« L'application n'est pas abonnée à l'API »** : souscrivez à la **version 2** de *Données Publiques Observation* sur le portail (la version 1 fonctionne jusqu'au 1er décembre 2026), puis validez la réauthentification proposée par Home Assistant.
 - **« Cette station ne publie pas d'observation toutes les 6 minutes »** : certaines stations du réseau ne transmettent pas en temps réel. Choisissez-en une autre.
+- **Humidité, vent ou un autre capteur est indisponible** : beaucoup de stations ne possèdent pas ce capteur. L'API ne renvoie alors aucune valeur et le capteur reste indisponible. Choisissez une autre station si cette mesure vous est nécessaire.
 - **Identifiants modifiés ou supprimés** : mettez-les à jour dans **Paramètres > Appareils et services > menu ⋮ > Identifiants de l'application**.
 
 ## Migrer depuis le capteur REST

@@ -14,7 +14,7 @@
       },
       "credentials": {
         "title": "Météo-France credentials",
-        "description": "1. Create an account on the [Météo-France API portal]({portal_url}) and sign in.\n2. Open the [Données Publiques Observation]({api_url}) API and subscribe to it (free).\n3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**.\n4. The curl example at the bottom of the page contains `Authorization: Basic` followed by a long value. Copy this value and paste it below.\n\nThe value is decoded to get the application ID and secret, which are saved in Home Assistant application credentials. Tokens are then renewed automatically.",
+        "description": "1. Create an account on the [Météo-France API portal]({portal_url}) and sign in.\n2. Open the [Données Publiques Observation]({api_url}) API and subscribe to its **version 2** (free). A version 1 subscription also works until Météo-France retires it on December 1, 2026.\n3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**.\n4. The curl example at the bottom of the page contains `Authorization: Basic` followed by a long value. Copy this value and paste it below.\n\nThe value is decoded to get the application ID and secret, which are saved in Home Assistant application credentials. Tokens are then renewed automatically.",
         "data": {
           "authorization": "Value after \"Authorization: Basic\""
         },
@@ -79,7 +79,7 @@
     },
     "error": {
       "invalid_auth": "Météo-France rejected the credentials.",
-      "not_subscribed": "The application is not subscribed to the Données Publiques Observation API.",
+      "not_subscribed": "The application is not subscribed to the Données Publiques Observation API (version 2).",
       "no_data": "This station publishes no 6-minute observation. Choose another station.",
       "cannot_connect": "Cannot reach the Météo-France API. Try again later.",
       "unknown_station": "No station with this ID. Check the 8 digits, including the leading zero.",
@@ -90,7 +90,7 @@
     "abort": {
       "already_configured": "This station is already configured.",
       "invalid_auth": "Météo-France rejected the credentials. Check them in Settings > Devices & services > three dots menu > Application credentials.",
-      "not_subscribed": "The application is not subscribed to the API. Subscribe to [Données Publiques Observation]({api_url}) on the [Météo-France API portal]({portal_url}), then try again.",
+      "not_subscribed": "The application is not subscribed to the API. Subscribe to the version 2 of [Données Publiques Observation]({api_url}) on the [Météo-France API portal]({portal_url}) (version 1 works until December 1, 2026), then try again.",
       "cannot_connect": "Cannot reach the Météo-France API. Try again later.",
       "no_stations": "Météo-France returned an empty station list. Try again later.",
       "reauth_successful": "Access to Météo-France restored."
@@ -131,7 +131,7 @@
       "message": "Météo-France rejected the application credentials."
     },
     "not_subscribed": {
-      "message": "The Météo-France application is not subscribed to the Données Publiques Observation API."
+      "message": "The Météo-France application is not subscribed to the Données Publiques Observation API (version 2)."
     },
     "update_failed": {
       "message": "Cannot read the Météo-France observation: {error}"

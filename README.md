@@ -28,7 +28,7 @@ Météo-France covers metropolitan France and the French overseas territories.
 The API is free.
 
 1. Create an account on the [Météo-France API portal](https://portail-api.meteofrance.fr) and sign in.
-2. Open the [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) API and subscribe to it.
+2. Open the [Données Publiques Observation](https://portail-api.meteofrance.fr/web/fr/api/DonneesPubliquesObservation) API and subscribe to its **version 2**. A version 1 subscription also works until Météo-France retires it on December 1, 2026.
 3. In **Mes API**, click **Générer token** for this API and pick **OAuth2**.
 4. At the bottom of the page, the `curl` example contains `Authorization: Basic` followed by a long value. Copy this value.
 
@@ -75,8 +75,9 @@ Each sensor shows the observation time (`observation_time`) and the station loca
 
 ## Troubleshooting
 
-- **"The application is not subscribed to the API"**: subscribe to *Données Publiques Observation* on the portal, then confirm the reauthentication offered by Home Assistant.
+- **"The application is not subscribed to the API"**: subscribe to the **version 2** of *Données Publiques Observation* on the portal (version 1 works until December 1, 2026), then confirm the reauthentication offered by Home Assistant.
 - **"This station publishes no 6-minute observation"**: some stations of the network do not report in real time. Pick another one.
+- **Humidity, wind or another sensor is unavailable**: many stations do not have this sensor. The API returns no value and the sensor stays unavailable. Pick another station if you need this measurement.
 - **Changed or removed credentials**: update them in **Settings > Devices & services > three dots menu > Application credentials**.
 
 ## Migrate from the REST sensor
